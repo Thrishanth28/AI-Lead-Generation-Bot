@@ -1,0 +1,203 @@
+{
+  "name": "AI Lead Generation Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "AI Lead Generation Bot",
+        "formDescription": "Enter your details and the lead information to send personalized cold outreach emails automatically",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Your Name",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "e.g. Thrishanth Reddy"
+            },
+            {
+              "fieldLabel": "Your Role",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "e.g. AI Automation Developer, Freelancer, Sales Executive"
+            },
+            {
+              "fieldLabel": "Your Service / Offer",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "e.g. AI automation workflows, Web development, SEO services"
+            },
+            {
+              "fieldLabel": "Lead Name",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "e.g. Rahul Sharma"
+            },
+            {
+              "fieldLabel": "Lead Email",
+              "fieldType": "email",
+              "requiredField": true,
+              "placeholder": "e.g. rahul@company.com"
+            },
+            {
+              "fieldLabel": "Lead Company",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "e.g. TechStartup Pvt Ltd"
+            },
+            {
+              "fieldLabel": "Lead Role / Position",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "e.g. Founder, CTO, Marketing Manager"
+            },
+            {
+              "fieldLabel": "Why are you reaching out?",
+              "fieldType": "textarea",
+              "requiredField": true,
+              "placeholder": "e.g. I noticed your company is growing fast and could benefit from AI automation to save time on repetitive tasks"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [0, 0],
+      "id": "lead-0001-0001-0001-000000000001",
+      "name": "Lead Form",
+      "webhookId": "lead-gen-form-trigger-001"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a personalized cold outreach email using these details:\n\nSENDER DETAILS:\nName: {{ $json['Your Name'] }}\nRole: {{ $json['Your Role'] }}\nService/Offer: {{ $json['Your Service / Offer'] }}\n\nLEAD DETAILS:\nName: {{ $json['Lead Name'] }}\nCompany: {{ $json['Lead Company'] }}\nPosition: {{ $json['Lead Role / Position'] }}\nReason for outreach: {{ $json['Why are you reaching out?'] }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an expert cold email copywriter who writes highly personalized, conversion-focused outreach emails.\n\nWrite a cold outreach email that follows these strict rules:\n\n1. Subject line: Write a curiosity-driven subject line (max 8 words) — do NOT use generic subjects like 'Partnership Opportunity'\n2. Opening: Reference something specific about their company or role — make it feel personal\n3. Pain point: Mention ONE specific problem their company likely faces\n4. Solution: Briefly explain how the sender's service solves that exact problem\n5. Social proof: Add ONE short believable achievement or result (can be fictional but realistic)\n6. CTA: ONE simple, low-friction call to action — like 'Would you be open to a 15-minute call this week?'\n7. Sign off: Professional and warm\n\nRules:\n- Maximum 150 words in the email body\n- No fluff, no buzzwords, no 'I hope this email finds you well'\n- Sound like a human wrote it — not a robot\n- Be confident but not pushy\n- Format: Subject line first, then email body\n\nOnly return the subject line and email body. Nothing else."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [260, 0],
+      "id": "lead-0001-0001-0001-000000000002",
+      "name": "Generate Cold Email"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [340, 220],
+      "id": "lead-0001-0001-0001-000000000003",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Lead Form').item.json['Lead Email'] }}",
+        "subject": "={{ $json.text.split('\\n')[0].replace('Subject:', '').replace('Subject Line:', '').trim() }}",
+        "emailType": "text",
+        "message": "={{ $json.text.split('\\n').slice(1).join('\\n').trim() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [520, 0],
+      "id": "lead-0001-0001-0001-000000000004",
+      "name": "Send Cold Email to Lead",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "threeshannth28@gmail.com",
+        "subject": "=✅ Cold Email Sent — {{ $('Lead Form').item.json['Lead Name'] }} at {{ $('Lead Form').item.json['Lead Company'] }}",
+        "emailType": "text",
+        "message": "=Hi Thrishanth,\n\nYour cold outreach email was successfully sent!\n\nLEAD SUMMARY:\n- Name: {{ $('Lead Form').item.json['Lead Name'] }}\n- Company: {{ $('Lead Form').item.json['Lead Company'] }}\n- Position: {{ $('Lead Form').item.json['Lead Role / Position'] }}\n- Email: {{ $('Lead Form').item.json['Lead Email'] }}\n\nEMAIL SENT:\n{{ $('Generate Cold Email').item.json.text }}\n\nFollow up in 3-5 days if no response.\n\n— Your AI Lead Generation Bot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [760, 0],
+      "id": "lead-0001-0001-0001-000000000005",
+      "name": "Send Confirmation to You",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Lead Form": {
+      "main": [
+        [
+          {
+            "node": "Generate Cold Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Cold Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Cold Email": {
+      "main": [
+        [
+          {
+            "node": "Send Cold Email to Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Cold Email to Lead": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation to You",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "lead-v001-0001-0001-000000000001",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "AILeadGenerationBot001",
+  "tags": []
+}
